@@ -1,0 +1,108 @@
+---
+title: "Loading the data from cored wells"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(petroreadr)
+library(tidyverse)
+library(gtsummary)
+library(skimr)
+```
+
+## The data available
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+## The las files directory
+
+path <- "../../raw_data/srt_from_opco_las"
+
+
+files <-data.frame(filename = list.files(path = path))
+files <- dplyr::filter(files, grepl(".las", filename)) %>% pull(filename)
+
+
+logs <- read_las(file.path(path, files), verbose = FALSE)$data %>% 
+    filter(SRT_OPCO >= 0 ) %>% 
+    rename(Zone = "Zoneloglinkedto'CEPSA_WELLTOPS_JUN20_STATIC'" ,
+           rt = "SRT_OPCO",
+           PHIT = "XPHIT_for_NN",
+           XGR  = "XGR_for_NN",
+           XNPHI = "XNPHI_for_NN",
+           XPERM = "XPERM_for_NN",
+           XRHOB = "XRHOB_for_NN",
+           XDRES = "XDRES_for_NN",
+           XSRES = "XSRES_for_NN",
+           XPEF  = "XPEF_for_NN",
+           XDT   = "XDT_for_NN"
+           )  %>% 
+    mutate_at(vars(WELL, Zone, XGR,XPERM,XDRES, XSRES,rt,PHIT,XNPHI, XRHOB,XPEF, XDT, Core_Perm_Air_Hz_DS_for_NN , Core_PHI_Hz_DS_for_NN ) , na_if,-999.25  ) %>% 
+    mutate(srt = if_else(rt == 1, "SRT-1", "non res") , 
+           srt = if_else(rt == 2, "SRT-2", srt),
+           srt = if_else(rt == 3, "SRT-3", srt),
+           srt = if_else(rt == 4, "SRT-4", srt),
+           srt = if_else(rt == 5, "SRT-5", srt),
+           srt = if_else(rt == 6, "SRT-6", srt),
+           zones = if_else(Zone ==  0 , "SH-1"        , "non res" ),
+           zones = if_else(Zone ==  1 , "KH-2_dns"    , "zones" ),
+           zones = if_else(Zone ==  2 , "KH-2_u"      , "zones" ),
+           zones = if_else(Zone ==  3 , "KH-2_u_res"  , "zones" ),
+           zones = if_else(Zone ==  4 , "DENSE_2"     , "zones" ),
+           zones = if_else(Zone ==  5 , "KH-2_l"      , "zones" ),
+           zones = if_else(Zone ==  6 , "KH-1_dns"    , "zones" ),
+           zones = if_else(Zone ==  7 , "KH-1"        , "zones" ),
+           zones = if_else(Zone ==  8 , "KH-1_res"    , "zones" ),
+           zones = if_else(Zone ==  9 , "KH-1_l"      , "zones" ),
+           zones = if_else(Zone == 10 , "LK-12_dns"   , "zones" ),
+           zones = if_else(Zone == 11 , "LK-12"       , "zones" ),
+           zones = if_else(Zone == 12 , "LK-12_bs"    , "zones" ),
+           zones = if_else(Zone == 13 , "LK-9"        , "zones" ),
+           zones = if_else(Zone == 14 , "LK-8_dns"    , "zones" ),
+           zones = if_else(Zone == 15 , "LK-8"        , "zones" ),
+           zones = if_else(Zone == 16 , "LK-7_dns"    , "zones" ),
+           zones = if_else(Zone == 17 , "LK-7"        , "zones" ),
+           zones = if_else(Zone == 18 , "LK-6_dns"    , "zones" ),
+           zones = if_else(Zone == 19 , "LK-6"        , "zones" ),
+           zones = if_else(Zone == 20 , "LK-5_dns"    , "zones" ),
+           zones = if_else(Zone == 21 , "LK-5"        , "zones" ),
+           zones = if_else(Zone == 22 , "LK-3_dns"    , "zones" ),
+           zones = if_else(Zone == 23 , "LK-3"        , "zones" ),
+           zones = if_else(Zone == 24 , "LK-3_l_dns"  , "zones" ),
+           zones = if_else(Zone == 25 , "LK-3_l"      , "zones" ),
+           zones = if_else(Zone == 26 , "LK-2_dns"    , "zones" ),
+           zones = if_else(Zone == 27 , "LK-2"        , "zones" ),
+           zones = if_else(Zone == 28 , "LK-1_dns"    , "zones" ),
+           zones = if_else(Zone == 29 , "LK-1"        , "zones" ),
+           zones = if_else(Zone == 30 , "LK-1_base"   , "zones" )
+
+           
+           )
+
+logs$rt <-  as.factor(logs$rt)
+logs$zones <-  as.factor(logs$zones)
+logs$srt <-  as.factor(logs$srt)
+
+
+logs %>% select(-c(Zone, rt)) %>% 
+    skim() %>% 
+    yank("numeric")
+```
+
+## Data to train the model
+
+We will train the model only with the values from the core data. The following table will show us this information.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+core <- logs %>% filter(!is.na(Core_Perm_Air_Hz_DS_for_NN), !is.na(Core_PHI_Hz_DS_for_NN ))
+
+
+core %>% select(-c(Zone, rt)) %>% 
+    skim() %>% 
+    yank("numeric")
+```
+
+The number of samples is `r nrow(core)`   wich is larger than it should be, we need to review it with Jesus.
