@@ -1,0 +1,205 @@
+---
+title: "Core data"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Packages
+
+library(readxl)
+library(tidyverse)
+library(flextable)
+
+```
+
+
+
+
+
+## The data
+
+In this document we load the core data available in Umm lulu :
+
+-   Core samples have been QC and clean up (Colin 2018 project, and a similar approach has been performed on newer samples).
+
+-   Depth shift interpretation performed by Cepsa, the OPCO official values have not been received.
+
+-    Log values have been sampled at each sample.
+
+The available data will be loaded and analysed in this document    
+
+## Samples per well
+
+
+
+```{r }
+
+
+
+rca_data <- read_excel("../../raw_data/srt_core/All_RCA_Data_with_log_data.xlsx", 
+                       col_types = c("skip", "skip", "skip", 
+                                     "numeric", "numeric", "text", "numeric", 
+                                     "numeric", "text", "text", "numeric", 
+                                     "skip", "numeric", "numeric", "numeric", 
+                                     "numeric", "numeric", "numeric", 
+                                     "numeric", "numeric", "numeric", 
+                                     "numeric", "skip", "numeric", "numeric")) %>% 
+    filter(`conditions experiment` == "overburden") %>% 
+    rename(Zone = `Zone log linked to 'CEPSA_WELLTOPS_JUN20_STATIC'`) %>% 
+        mutate(srt = if_else(SRT_OPCO == 1, "SRT-1", "non res") , 
+               srt = if_else(SRT_OPCO == 2, "SRT-2", srt),
+               srt = if_else(SRT_OPCO == 3, "SRT-3", srt),
+               srt = if_else(SRT_OPCO == 4, "SRT-4", srt),
+               srt = if_else(SRT_OPCO == 5, "SRT-5", srt),
+               srt = if_else(SRT_OPCO == 6, "SRT-6", srt),
+               zones = if_else(Zone ==   0 , "SH-1"                     , "non res" )  ,
+               zones = if_else(Zone ==   1 , "HAWAR"                    , zones ),
+               zones = if_else(Zone ==   2 , "KH-2G"                    , zones ),
+               zones = if_else(Zone ==   3 , "KH-2F"                    , zones ),
+               zones = if_else(Zone ==   4 , "KH-2E_dense"              , zones ),
+               zones = if_else(Zone ==   5 , "KH-2D"                    , zones ),
+               zones = if_else(Zone ==   6 , "KH-2_dense"               , zones ),
+               zones = if_else(Zone ==   7 , "KH-1C"                    , zones ),
+               zones = if_else(Zone ==   8 , "KH-1B"                    , zones ),
+               zones = if_else(Zone ==   9 , "KH-1_high_perm_base"      , zones ),
+               zones = if_else(Zone ==  10 , "LEKHWAIR_UPPER_DENSE"     , zones ),
+               zones = if_else(Zone ==  11 , "LK-12D"                   , zones ),
+               zones = if_else(Zone ==  12 , "LK-12_dense"              , zones ),
+               zones = if_else(Zone ==  13 , "LK-9"                     , zones ),
+               zones = if_else(Zone ==  14 , "LK-9A"                    , zones ),
+               zones = if_else(Zone ==  15 , "LK-8A"                    , zones ),
+               zones = if_else(Zone ==  16 , "LK-8_dense"               , zones ),
+               zones = if_else(Zone ==  17 , "LK-7B"                    , zones ),
+               zones = if_else(Zone ==  18 , "LK-7B_dense"              , zones ),
+               zones = if_else(Zone ==  19 , "LK-7A"                    , zones ),
+               zones = if_else(Zone ==  20 , "LK-7_dense"               , zones ),
+               zones = if_else(Zone ==  21 , "LK-6_reservoir"           , zones ),
+               zones = if_else(Zone ==  22 , "LK-6B_dense"              , zones ),
+               zones = if_else(Zone ==  23 , "LK-6A"                    , zones ),
+               zones = if_else(Zone ==  24 , "LK-6_dense"               , zones ),
+               zones = if_else(Zone ==  25 , "LK-5B"                    , zones ),
+               zones = if_else(Zone ==  26 , "LK-5_dense"               , zones ),
+               zones = if_else(Zone ==  27 , "LK-3"                     , zones ),
+               zones = if_else(Zone ==  28 , "LK-3_dense"               , zones ),
+               zones = if_else(Zone ==  29 , "LK-3_dense_porosity"      , zones ),
+               zones = if_else(Zone ==  30 , "LK-3_dense_porosity_base" , zones ),
+               zones = if_else(Zone ==  31 , "LK-2"                     , zones ),
+               zones = if_else(Zone ==  32 , "LK-2_dense"               , zones ),
+               zones = if_else(Zone ==  33 , "LK-1"                     , zones ),
+               zones = if_else(Zone ==  34 , "LK-1_dense"               , zones ),
+               ) %>% 
+    drop_na(zones, srt)
+
+
+rca_data$zones <- as_factor(rca_data$zones)
+
+rca_data$zones <- factor(rca_data$zones, 
+                         levels = c("SH-1"         ,
+                            "HAWAR"                ,                
+                            "KH-2G"                ,                 
+                            "KH-2F"                ,                 
+                            "KH-2E_dense"          , 
+                            "KH-2D"                ,            
+                            "KH-2_dense"           ,     
+                            "KH-1C"                ,          
+                            "KH-1B"                ,         
+                            "KH-1_high_perm_base"  ,  
+                            "LEKHWAIR_UPPER_DENSE" ,
+                            "LK-12D"               ,      
+                            "LK-12_dense"          ,
+                            "LK-9"                 ,           
+                            "LK-9A"                ,          
+                            "LK-8A"                ,         
+                            "LK-8_dense"           ,  
+                            "LK-7B"                ,       
+                            "LK-7B_dense"          ,
+                            "LK-7A"                ,           
+                            "LK-7_dense"           ,    
+                            "LK-6_reservoir"       ,
+                            "LK-6B_dense"          ,
+                            "LK-6A"                ,           
+                            "LK-6_dense"           ,    
+                            "LK-5B"                ,         
+                            "LK-5_dense"           ,  
+                            "LK-3"                 ,       
+                            "LK-3_dense"           ,
+                            "LK-3_dense_porosity"  ,
+                            "LK-3_dense_porosity_base"  ,
+                            "LK-2"                 ,    
+                            "LK-2_dense"           ,
+                            "LK-1"                 ,     
+                            "LK-1_dense"        ))
+                            
+```
+
+There are a total of 13 wells with core samples and 1703 samples, however for this study we only use the samples with SRT interpretation the following table shows the available samples per well
+
+```{r}
+rca_data %>% 
+    select(Well) %>% 
+    count(Well) %>% 
+    flextable() %>% autofit() %>% theme_vanilla() %>% 
+    add_header_lines("Core samples per well")
+
+
+```
+
+## Samples per zone
+
+
+```{r}
+rca_data %>% 
+    select(zones) %>% 
+    count(zones) %>% 
+    flextable() %>% autofit() %>% theme_vanilla() %>% 
+    add_header_lines("Core samples per Zone")
+
+rca_data %>% 
+    # count(zones) %>% 
+    ggplot(aes(zones))+
+    geom_bar()+
+    coord_flip()+
+    scale_x_discrete(limits=rev)+
+    theme_minimal()
+```
+
+
+```{r}
+rca_data %>% 
+    select(srt) %>% 
+    count(srt) %>% 
+    flextable() %>% autofit() %>% theme_vanilla() %>% 
+    add_header_lines("Core samples per SRT")
+```
+
+```{r}
+
+
+
+rca_data %>% 
+    # count(zones) %>% 
+    ggplot(aes(srt))+
+    geom_bar()+
+    coord_flip()+
+    scale_x_discrete(limits=rev)+
+    theme_minimal()
+
+```
+
+
+
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
