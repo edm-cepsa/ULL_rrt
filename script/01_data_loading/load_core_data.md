@@ -1,33 +1,75 @@
 Core data
 ================
 
-## Data loading
+## The data
 
-This is an R Markdown format used for publishing markdown documents to
-GitHub. When you click the **Knit** button all R code chunks are run and
-a markdown file (.md) suitable for publishing to GitHub is generated.
+In this document we load the core data available in Umm lulu :
 
-## Including Code
+-   Core samples have been QC and clean up (Colin 2018 project, and a
+    similar approach has been performed on newer samples).
 
-You can include R code in the document as follows:
+-   Depth shift interpretation performed by Cepsa, the OPCO official
+    values have not been received.
 
-``` r
-summary(cars)
-```
+-   Log values have been sampled at each sample.
 
-    ##      speed           dist       
-    ##  Min.   : 4.0   Min.   :  2.00  
-    ##  1st Qu.:12.0   1st Qu.: 26.00  
-    ##  Median :15.0   Median : 36.00  
-    ##  Mean   :15.4   Mean   : 42.98  
-    ##  3rd Qu.:19.0   3rd Qu.: 56.00  
-    ##  Max.   :25.0   Max.   :120.00
+The available data will be loaded and analysed in this document
 
-## Including Plots
+## Samples per well
 
-You can also embed plots, for example:
+There are a total of 13 wells with core samples and 1703 samples,
+however for this study we only use the samples with SRT interpretation
+the following table shows the available samples per well
 
-![](load_core_data_files/figure-gfm/pressure-1.png)<!-- -->
+## Samples per zone
 
-Note that the `echo = FALSE` parameter was added to the code chunk to
-prevent printing of the R code that generated the plot.
+Its clear from the table below that the main reservoirs have the largest
+amount of samples:
+
+The same information visually:
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+## Samples per SRT
+
+A quick view to the table reveals that the SRT-1 and SRT-2 have
+significatevely less samples than the rest of the SRTs.
+
+### Visually :
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+A different view by SRT shows clearly the zones with larger
+representation of samples per SRT.
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+## Porosity - Permeability data QC
+
+Porosity and permeability are presented in histograms.
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+A split by SRT allow us to understand the variability in rock quality as
+we move trough the SRTs.
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+### histograms by zone
+
+A similar analysis, this time by zone and using the color attribute to
+visualize the SRTs.
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+### histograms by well
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+### poro perm cross plot
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+# cross plot by zone
+
+![](load_core_data_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->

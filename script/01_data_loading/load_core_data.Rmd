@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readxl)
 library(tidyverse)
 library(flextable)
+library(patchwork)
 
 ```
 
@@ -34,7 +35,7 @@ The available data will be loaded and analysed in this document
 
 
 
-```{r }
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 
 
@@ -136,7 +137,7 @@ rca_data$zones <- factor(rca_data$zones,
 
 There are a total of 13 wells with core samples and 1703 samples, however for this study we only use the samples with SRT interpretation the following table shows the available samples per well
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 rca_data %>% 
     select(Well) %>% 
     count(Well) %>% 
@@ -148,13 +149,22 @@ rca_data %>%
 
 ## Samples per zone
 
+Its clear from the table below that the main reservoirs have the largest amount of samples:
 
-```{r}
+```{r echo=FALSE, fig.height=7, fig.width=8, message=FALSE, warning=FALSE}
 rca_data %>% 
     select(zones) %>% 
     count(zones) %>% 
     flextable() %>% autofit() %>% theme_vanilla() %>% 
     add_header_lines("Core samples per Zone")
+
+
+```
+
+The same information visually:
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 rca_data %>% 
     # count(zones) %>% 
@@ -162,11 +172,17 @@ rca_data %>%
     geom_bar()+
     coord_flip()+
     scale_x_discrete(limits=rev)+
-    theme_minimal()
+    theme_bw()+
+    labs(y = "Core samples per zone",
+         x = "Zones")
 ```
 
 
-```{r}
+## Samples per SRT
+
+A quick view to the table reveals that the SRT-1 and SRT-2 have significatevely less samples than the rest of the SRTs. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 rca_data %>% 
     select(srt) %>% 
     count(srt) %>% 
@@ -174,7 +190,9 @@ rca_data %>%
     add_header_lines("Core samples per SRT")
 ```
 
-```{r}
+### Visually :
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 
 
@@ -184,22 +202,228 @@ rca_data %>%
     geom_bar()+
     coord_flip()+
     scale_x_discrete(limits=rev)+
+    theme_bw()+
+    labs(x = "SRT",
+         y = "Core samples")
+
+```
+
+A different view by  SRT shows clearly the zones with larger representation of samples per SRT.
+
+```{r echo=FALSE, fig.height=7, fig.width=8, message=FALSE, warning=FALSE}
+
+rca_data %>% 
+    # count(zones) %>% 
+    ggplot(aes(zones))+
+    geom_bar()+
+    coord_flip()+
+    scale_x_discrete(limits=rev)+
+    theme_bw()+
+    labs(y = "Core samples ",
+         x = "Zones")+
+    facet_wrap(~srt)
+```
+
+
+
+## Porosity - Permeability data QC
+
+Porosity and permeability are presented in histograms.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+poro_hist<- 
+    rca_data %>% 
+        ggplot(aes(poro,
+                   #fill= srt
+                   ))+
+        geom_histogram(bins = 15)+
+        # geom_vline(xintercept = mean(rca_data$poro), color= "red")+
+        # geom_label(x = mean(rca_data$poro),
+        #            y = 150,
+        #            aes(label = "MEAN"),
+        #            color= "red",
+        #            fontface = "bold")+
+        # geom_vline(xintercept = quantile(rca_data$poro, c(.1, .9)), 
+        #            color= "blue")+
+        # geom_label(x = quantile(rca_data$poro, .1 ),
+        #            y = 140,
+        #            aes(label = "P90"),
+        #            color= "blue",
+        #            fontface = "bold")+
+        # geom_label(x = quantile(rca_data$poro, .9 ),
+        #            y = 140,
+        #            aes(label = "P10"),
+        #            color= "blue",
+        #            fontface = "bold")+
+        theme_minimal()+
+        scale_x_continuous(breaks = seq(0, 0.3, 0.05),
+                           labels = seq(0, 0.3, 0.05))+
+    labs(x= "Core Porosity (frac)",
+         y = "")
+        
+
+perm_hist<- 
+    rca_data %>% 
+        ggplot(aes(perm,
+                   #fill= srt
+                   ))+
+        geom_histogram(bins = 15)+
+        # geom_vline(xintercept = mean(rca_data$perm), color= "red")+
+        # geom_label(x = mean(rca_data$perm),
+        #            y = 150,
+        #            aes(label = "MEAN"),
+        #            color= "red",
+        #            fontface = "bold")+
+        # geom_vline(xintercept = quantile(rca_data$perm, c(.1, .9)), 
+        #            color= "blue")+
+        # geom_label(x = quantile(rca_data$perm, .1 ),
+        #            y = 100,
+        #            aes(label = "P90"),
+        #            color= "blue",
+        #            fontface = "bold")+
+        # geom_label(x = quantile(rca_data$perm, .9 ),
+        #            y = 100,
+        #            aes(label = "P10"),
+        #            color= "blue",
+        #            fontface = "bold")+
+        theme_minimal()+
+        scale_x_continuous(breaks = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           labels = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           trans = "log10")+
+    labs(x= "Core Permeability (mD)",
+         y = "")        
+
+poro_hist + perm_hist
+
+
+```
+
+A split by SRT allow us to understand the variability in rock quality as we move trough the SRTs.
+
+
+```{r echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+poro_hist_srt<-
+    rca_data %>% 
+        ggplot(aes(poro))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = seq(0, 0.3, 0.05),
+                           labels = seq(0, 0.3, 0.05))+
+    labs(x= "Core Porosity (frac)",
+         y = "")+
+    facet_wrap(~srt,ncol = 1)
+
+perm_hist_srt<-
+    rca_data %>% 
+        ggplot(aes(perm))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           labels = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           trans = "log10")+
+    labs(x= "Core Permeability (mD)",
+         y = "")+
+    facet_wrap(~srt,ncol = 1)
+
+
+poro_hist_srt + perm_hist_srt
+```
+
+### histograms by zone
+A similar analysis, this time by zone and using the color attribute to visualize the SRTs.
+
+
+```{r echo=FALSE, fig.height=12, fig.width=9, message=FALSE, warning=FALSE}
+
+poro_hist_zone<-
+    rca_data %>% 
+        ggplot(aes(poro, fill = srt))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = seq(0, 0.3, 0.05),
+                           labels = seq(0, 0.3, 0.05))+
+    labs(x= "Core Porosity (frac)",
+         y = "")+
+    facet_wrap(~zones,ncol = 1, scales = "free_y")
+
+perm_hist_zone<-
+    rca_data %>% 
+        ggplot(aes(perm, fill = srt))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           labels = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           trans = "log10")+
+    labs(x= "Core Permeability (mD)",
+         y = "")+
+    facet_wrap(~zones,ncol = 1, scales = "free_y")
+
+
+(poro_hist_zone + perm_hist_zone) + plot_layout(guides = "collect")
+
+```
+
+### histograms by well
+
+```{r echo=FALSE, fig.height=14, fig.width=9, message=FALSE, warning=FALSE}
+
+poro_hist_well<-
+    rca_data %>% 
+        ggplot(aes(poro, fill = srt))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = seq(0, 0.3, 0.05),
+                           labels = seq(0, 0.3, 0.05))+
+    labs(x= "Core Porosity (frac)",
+         y = "")+
+    facet_wrap(~Well,ncol = 1, scales = "free_y")
+
+perm_hist_well<-
+    rca_data %>% 
+        ggplot(aes(perm, fill = srt))+
+        geom_histogram(bins = 15)+
+        theme_minimal()+
+        scale_x_continuous(breaks = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           labels = c(0.001,0.01,0.1, 1, 10,100,1000),
+                           trans = "log10")+
+    labs(x= "Core Permeability (mD)",
+         y = "")+
+    facet_wrap(~Well,ncol = 1, scales = "free_y")
+
+
+(poro_hist_well + perm_hist_well) + plot_layout(guides = "collect")
+
+
+```
+
+
+### poro perm cross plot
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+rca_data %>% 
+    ggplot(aes(poro, perm, color = srt))+
+    geom_point(alpha = 0.5, size = 2)+
+    scale_y_continuous(trans = "log10")+
     theme_minimal()
 
 ```
 
 
+# cross plot by zone
+
+```{r echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
+
+rca_data %>% 
+    ggplot(aes(poro, perm, color = srt))+
+    geom_point(alpha = 0.5, size = 2)+
+    scale_y_continuous(trans = "log10")+
+    theme_minimal()+
+    facet_wrap(~zones, nrow = 7)
 
 
-
-
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
