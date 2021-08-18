@@ -427,3 +427,9 @@ rca_data %>%
 
 ```
 
+
+```{r}
+
+saveRDS(rca_data, file = "../../clean_data/core_ready.rds")
+```
+

@@ -1,0 +1,69 @@
+---
+title: "model"
+author: "Edmundo Peralta"
+date: "18/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidymodels)
+library(gt)
+library(tidymodels)
+library(skimr)
+
+```
+
+## The Available data
+
+The core samples available in Umm lulu were joined with the log data. A selection of logs was made considering the ones available in most wells.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+core_data <- readRDS("../../clean_data/core_ready.rds")
+
+head(core_data) %>% 
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO))%>% 
+    gt() %>% 
+    fmt_number(columns = c(poro, XNPHI,XRHOB,XSW, XDRES,XSRES,XPEF,XPHIT),
+               decimals = 2
+               ) %>% 
+    fmt_number(columns = c(perm, XPERM),
+               decimals = 1
+               ) %>% 
+    cols_move_to_start(Well) %>% 
+    cols_width(
+        starts_with("sr") ~ px(1000)
+        
+        ) %>% 
+    tab_header(
+        title = md("Subset of **Core data** with associated well log values")
+    )
+
+```
+
+### Main statistics of the available dataset
+The following table shows the main statistics of the data set.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+core_data %>%     
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO
+              ))%>%
+    # group_by(Well) %>% 
+    skim()
+
+
+```
