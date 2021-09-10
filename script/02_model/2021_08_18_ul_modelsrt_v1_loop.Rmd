@@ -232,7 +232,7 @@ to_train <-
 ### número máximo de logs
 n<- length(logs)
 
-for (i in 2:n) {
+for (i in 8:n) {
   temp <- combn(logs,i)
   
   loop <- ncol(temp)
@@ -311,23 +311,23 @@ for (i in 2:n) {
         add_model(rf_spec)
     
     
-    #no_cores <- detectCores() - 1 
-    # doParallel::registerDoParallel(cores = no_cores)
+    no_cores <- detectCores() - 1 
+     doParallel::registerDoParallel(cores = no_cores)
     kh_rs <- fit_resamples(
       kh_wf,
       resamples = core_folds_kh,
       control = control_resamples(save_pred = TRUE)
     )
-    stopCluster(cl) 
+    
     
       
-    # doParallel::registerDoParallel(cores = no_cores)
+     doParallel::registerDoParallel(cores = no_cores)
     lk_rs <- fit_resamples(
       lk_wf,
       resamples = core_folds_lk,
       control = control_resamples(save_pred = TRUE)
     )
-    stopCluster(cl) 
+    
     
     
     metric_kh <- collect_metrics(kh_rs)    
@@ -379,12 +379,132 @@ for (i in 2:n) {
 
 
 ```{r}
-kh_fit <- fit(kh_wf, kh_train)
-lk_fit <- fit(lk_wf, lk_train)
 
-predict(kh_fit, kh_test)
+logs <- c("XGR"    ,   "XRHOB"   ,  "XPHIT"  ,   "log_XPERM" ,"log_XDRES", "log_XSRES")
+
+
+to_train <-
+  all_logs %>% 
+    select(logs, srt, MD, Well, main_zone) %>% 
+    drop_na()
+
+
+    xdata <-
+      to_train %>% 
+      select(logs,  
+             MD,Well, srt,main_zone
+             )
+    
+
+    
+    
+    
+    kh_split <- xdata %>% 
+      filter(main_zone == "Kharaib") %>%   
+      initial_split( ) #, strata = status_id)
+    
+
+    kh_train <- training(kh_split)
+
+    
+     rf_spec <- rand_forest(trees = 1000) %>% 
+        set_mode("classification") %>% 
+        set_engine("ranger")
+    
+    
+    kh_recipe <- 
+      recipe(formula = srt ~ . , data =  kh_train) %>% 
+      update_role(MD , new_role = "id") %>% 
+      update_role(Well , new_role = "id") %>% 
+      update_role(main_zone , new_role = "id") 
+    
+   kh_wf <- workflow() %>% 
+        add_recipe(kh_recipe) %>% 
+        add_model(rf_spec)  
+    
+    
+    
+set.seed(123)
+
+  kh_fit <- fit(kh_wf, kh_train)
+
+  
+  
+  
+  
+  
+  
+```
+
+
+```{r}
+
+logs <- c("XGR"   ,       "XSRES"    ,    "XRHOB"   ,     "XPHIT",        "res_diff_log" ,"res_diff_lin", "log_XPERM"  )
+
+
+to_train <-
+  all_logs %>% 
+    select(logs, srt, MD, Well, main_zone) %>% 
+    drop_na()
+
+
+    xdata <-
+      to_train %>% 
+      select(logs,  
+             MD,Well, srt,main_zone
+             )
+    
+
+    
+    
+
+    lk_split <- xdata %>% 
+      filter(main_zone == "Lekhwair") %>%   
+      initial_split( ) #, strata = status_id)
+    
+
+    lk_train <- training(lk_split)
+    
+
+    lk_test <- testing(lk_split)
+   
+        
+    rf_spec <- rand_forest(trees = 1000) %>% 
+        set_mode("classification") %>% 
+        set_engine("ranger")
+    
+    
+    lk_recipe <- 
+      recipe(formula = srt ~ . , data =  lk_train) %>% 
+      update_role(MD , new_role = "id") %>% 
+      update_role(Well , new_role = "id") %>% 
+      update_role(main_zone , new_role = "id") 
+    
+
+    
+    lk_wf <- workflow() %>% 
+        add_recipe(lk_recipe) %>% 
+        add_model(rf_spec) 
+
+  lk_fit <- fit(lk_wf, lk_train)
+  
+  
+  
+  
+```
+
+
+## Predicton
+```{r}
+
+
+
+
+
 
 ```
+
+
 
 
 bird_fit <- fit(wf_interact, bird_train)

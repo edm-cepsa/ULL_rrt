@@ -76,9 +76,12 @@ logs <- read_las(file.path(path, files), verbose = FALSE)$data %>%
            zones = if_else(Zone == 27 , "LK-2"        , "zones" ),
            zones = if_else(Zone == 28 , "LK-1_dns"    , "zones" ),
            zones = if_else(Zone == 29 , "LK-1"        , "zones" ),
-           zones = if_else(Zone == 30 , "LK-1_base"   , "zones" )
-
-           
+           zones = if_else(Zone == 30 , "LK-1_base"   , "zones" ),
+           log_XSRES = log10(XSRES),
+           log_XPERM = log10(XPERM),
+           log_XDRES = log10(XDRES),
+           res_diff_log = log_XDRES - log_XSRES,
+           res_diff_lin = XDRES - XSRES
            )
 
 logs$rt <-  as.factor(logs$rt)
@@ -106,3 +109,15 @@ core %>% select(-c(Zone, rt)) %>%
 ```
 
 The number of samples is `r nrow(core)`   wich is larger than it should be, we need to review it with Jesus.
+
+
+
+
+
+
+```{r}
+
+
+
+```
+

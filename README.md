@@ -10,13 +10,20 @@ Reviewing the provided data from the OPCO we only have a "log with SRT", therefo
 
 2021 sept 9
 
-Optimization run working on the set of logs that maximizes the roc_auc for Kharaib and Lekhwair respctively.
+Optimization run working on the set of logs that maximizes the roc_auc for Kharaib and Lekhwair respectively.
+
+
+We stopped in 8 logs
 
 The best cases were for Lekhwaair
+
+0.9199219
 
 "XGR"          "XSRES"        "XRHOB"        "XPHIT"        "res_diff_log" "res_diff_lin" "log_XPERM"  
 
 and for KHAraib
+
+0.9164546
 
 "XGR"       "XRHOB"     "XPHIT"     "log_XPERM" "log_XDRES" "log_XSRES"
 
