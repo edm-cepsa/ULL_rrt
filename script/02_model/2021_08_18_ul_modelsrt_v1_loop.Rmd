@@ -435,6 +435,26 @@ set.seed(123)
   
   
 ```
+## load the logs to model
+
+
+
+
+```{r}
+xdata <- read_rds("../../clean_data/all_logs_for_model.rds") %>% 
+  rename(MD = DEPT,
+         Well = WELL, 
+         ) %>%
+  select("XGR"    ,   "XRHOB"   ,  "XPHIT"  ,   "log_XPERM" ,"log_XDRES", "log_XSRES", "main_zone" , "Well", "MD" ) %>% 
+  drop_na()
+
+kharaib_rrt<- predict(kh_fit, xdata)
+
+
+```
+
+
+
 
 
 ```{r}
@@ -498,6 +518,14 @@ to_train <-
 ```{r}
 
 
+xdata <- read_rds("../../clean_data/all_logs_for_model.rds") %>% 
+  rename(MD = DEPT,
+         Well = WELL, 
+         ) %>%
+  select("XGR"   ,       "XSRES"    ,    "XRHOB"   ,     "XPHIT",        "res_diff_log" ,"res_diff_lin", "log_XPERM" , "main_zone" , "Well", "MD" ) %>% 
+  drop_na()
+
+lekhwair_rrt<- predict(lk_fit, xdata)
 
 
 
