@@ -28,21 +28,19 @@ files <- dplyr::filter(files, grepl(".LAS", filename)) %>% pull(filename)
 logs <- read_las(file.path(path, files), verbose = FALSE)$data %>% 
     rename(Zone = "Zoneloglinkedto'CEPSA_WELLTOPS_JUN20_STATIC'" 
            )  %>%
-    mutate_at(vars(WELL, Zone, XGR,XPERM,XDRES, XSRES,XPHIT,XNPHI, XRHOB,XPEF, XDT) , na_if,-999.25  ) %>% 
-    mutate(Zone = as_factor(Zone),
-           log_XSRES = log10(XSRES),
+    mutate(log_XSRES = log10(XSRES),
            log_XPERM = log10(XPERM),
            log_XDRES = log10(XDRES),
            res_diff_log = log_XDRES - log_XSRES,
            res_diff_lin = XDRES - XSRES,
-           main_zone = ifelse(Zone < 10 , "Kharaib"    , "other" ),
+           main_zone = ifelse(Zone < 10 , "Kharaib"    , "other"   ),
            main_zone = ifelse(Zone == 4 ,  "Dense"     , main_zone ),
            main_zone = ifelse(Zone == 6 ,  "Dense"     , main_zone ),
            main_zone = ifelse(Zone == 10 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone >  10 ,  "Lekhwair" , main_zone ),
            main_zone = ifelse(Zone == 12 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
-           main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 18 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 20 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 22 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 24 ,  "Dense"    , main_zone ),
@@ -52,8 +50,15 @@ logs <- read_las(file.path(path, files), verbose = FALSE)$data %>%
            main_zone = ifelse(Zone == 30 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 32 ,  "Dense"    , main_zone ),
            main_zone = ifelse(Zone == 34 ,  "Dense"    , main_zone ),
-           main_zone = as.factor(main_zone)
-           )
+           main_zone = ifelse(Zone ==  0 ,  "SH-1"     , main_zone ),
+           main_zone = ifelse(Zone ==  1 ,  "HAWAR"    , main_zone ),
+           main_zone = as.factor(main_zone),
+           XSW       = ifelse(XSW <  0, NA, XSW ),
+           XPERM       = ifelse(XPERM <  0, NA, XPERM ),
+           XDRES       = ifelse(XDRES <  0, NA, XDRES ),
+           XSRES       = ifelse(XSRES <  0, NA, XSRES ),
+           ) %>% 
+    drop_na(Zone)
 
  
 
