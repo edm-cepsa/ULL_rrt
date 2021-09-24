@@ -27,3 +27,18 @@ and for KHAraib
 
 "XGR"       "XRHOB"     "XPHIT"     "log_XPERM" "log_XDRES" "log_XSRES"
 
+
+
+ sept 23 using the most common logs
+ 
+ Kharaib
+ 
+ 0.9063501 
+ 
+ XGR XSRES XPHIT res_diff_log res_diff_lin log_XPERM
+ 
+ lekhwair
+ 
+ 0.9127637 
+ 
+ XGR XSRES XPHIT res_diff_lin log_XPERM log_XDRES

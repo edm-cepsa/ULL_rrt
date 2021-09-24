@@ -246,7 +246,7 @@ to_train <-
 ### número máximo de logs
 n<- length(logs)
 
-for (i in 8:n) {
+for (i in 2:n) {
   temp <- combn(logs,i)
   
   loop <- ncol(temp)
@@ -321,8 +321,7 @@ for (i in 8:n) {
         add_model(rf_spec)
     
     
-    no_cores <- detectCores() - 1 
-     doParallel::registerDoParallel(cores = no_cores)
+
     kh_rs <- fit_resamples(
       kh_wf,
       resamples = core_folds_kh,
@@ -331,7 +330,7 @@ for (i in 8:n) {
     
 
       
-     doParallel::registerDoParallel(cores = no_cores)
+
     lk_rs <- fit_resamples(
       lk_wf,
       resamples = core_folds_lk,

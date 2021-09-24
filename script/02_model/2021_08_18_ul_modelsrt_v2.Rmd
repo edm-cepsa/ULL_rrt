@@ -1,0 +1,244 @@
+---
+title: "model"
+author: "Edmundo Peralta"
+date: "18/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidymodels)
+library(gt)
+library(tidymodels)
+library(skimr)
+library(doParallel)
+library(ranger)
+library(GGally)
+
+```
+
+## The Available data
+
+The core samples available in Umm lulu were joined with the log data. A selection of logs was made considering the ones available in most wells.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+core_data <- readRDS("../../clean_data/core_ready.rds") %>% 
+       mutate(main_zone = ifelse(Zone < 10 , "Kharaib"    , "other" ),
+           main_zone = ifelse(Zone == 4 ,  "Dense"     , main_zone ),
+           main_zone = ifelse(Zone == 6 ,  "Dense"     , main_zone ),
+           main_zone = ifelse(Zone == 10 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone >  10 ,  "Lekhwair" , main_zone ),
+           main_zone = ifelse(Zone == 12 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 20 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 22 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 24 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 26 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 28 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 29 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 30 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 32 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 34 ,  "Dense"    , main_zone ),
+           main_zone = as.factor(main_zone)
+                      )
+
+
+head(core_data) %>% 
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO))%>% 
+    gt() %>% 
+    fmt_number(columns = c(poro, XNPHI,XRHOB,XSW, XDRES,XSRES,XPEF,XPHIT),
+               decimals = 2
+               ) %>% 
+    fmt_number(columns = c(perm, XPERM),
+               decimals = 1
+               ) %>% 
+    cols_move_to_start(Well) %>% 
+    cols_width(
+        starts_with("sr") ~ px(1000)
+        
+        ) %>% 
+    tab_header(
+        title = md("Subset of **Core data** with associated well log values")
+    )
+
+```
+
+### Main statistics of the available dataset
+
+The following table shows the main statistics of the data set.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+core_data %>%     
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO
+              ))%>%
+    # group_by(Well) %>% 
+    skim()
+
+
+```
+
+
+## property analysis
+
+
+```{r fig.width=14}
+
+core_data %>%     
+    select(-c( MD,Well,RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO, zones, 
+              ))%>%
+  mutate(srt = factor(srt)) %>% 
+  ggpairs(aes(colour = srt))
+
+```
+
+
+
+
+
+### SRT distributions by zone
+
+The following figure shows the available core samples by the 2 main zones:
+
+-   **Kharaib** , including all Kharaib zones excluding the denses
+-   **Lekhwair**, including all Lekhwair zones excluding denses.
+
+
+
+```{r }
+core_data_clean <- 
+    core_data %>% 
+        filter(main_zone != "Dense",
+               XPHIT >= 0) %>% 
+    select(-c(XDT,XPEF,XSW, estim_perm))
+
+to_train<-
+    core_data_clean %>% 
+    select(-c(Depth, poro,perm, `conditions experiment`, RT_all, SRT_OPCO))
+
+to_train %>% 
+        ggplot(aes(srt))+
+        geom_bar(fill = "darkgreen", alpha = 0.5)+
+        facet_wrap(vars(main_zone),
+                   scales = "free")+
+        coord_flip()+
+        theme_bw()+
+        labs(x = "SRT",
+             y= "Core samples")
+
+
+
+```
+
+
+
+Given the distribution of SRTs, we will use a stratified methodology for sampling the dataset to mini ize the effect of the imbalance in the data sampling.
+
+
+
+## Data prepareation
+
+### traning and split
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+set.seed(123)
+core_folds <- to_train %>%
+  filter(main_zone == "Kharaib") %>% 
+    select(-c(MD, Well,Zone, zones, main_zone )) %>% 
+    mutate(srt = factor(srt)) %>% 
+    bootstraps(
+      # strata = srt
+      )
+
+core_folds
+
+```
+
+
+```{r}
+
+rf_spec <- rand_forest(trees = 1000) %>% 
+    set_mode("classification") %>% 
+    set_engine("ranger")
+
+
+core_wf <- workflow() %>% 
+    add_formula(srt ~ .) %>% 
+    add_model(rf_spec)
+
+core_wf
+    
+
+
+
+
+
+```
+
+Lets fit the random forest model to the bootstrap resamples
+
+```{r}
+
+doParallel::registerDoParallel()
+core_rs <- fit_resamples(
+  core_wf,
+  resamples = core_folds,
+  control = control_resamples(save_pred = TRUE)
+)
+core_rs
+
+```
+
+## Evaluate the metrics
+
+```{r}
+
+collect_metrics(core_rs)
+
+```
+
+
+
+```{r}
+core_rs %>%
+  collect_predictions() %>%
+  group_by(id) %>%
+  ppv(srt, .pred_class)
+```
+
+
+```{r}
+core_rs %>%
+  collect_predictions() %>%
+  group_by(id) %>%
+  roc_curve(srt, `.pred_SRT-1`:`.pred_SRT-6`) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = id)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+  facet_wrap(~.level, ncol = 3) +
+  coord_equal()+
+  theme_minimal()
+```
+
+
