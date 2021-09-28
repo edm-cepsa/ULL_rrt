@@ -42,3 +42,21 @@ and for KHAraib
  0.9127637 
  
  XGR XSRES XPHIT res_diff_lin log_XPERM log_XDRES
+ 
+ 
+ 
+ 
+ ## run model based on the logs from the opco in the cored wells 1464 runs
+ 
+ 
+ lk  960 0.9206792 XGR XPHIT res_diff_log log_XPERM log_XDRES
+ lk  812 0.9199021 XGR XDRES XPHIT res_diff_lin log_XPERM
+ lk  806 0.9174256 XGR XDRES XPHIT res_diff_log log_XPERM
+ 
+ 
+ kh  795 0.9286088 XGR XDRES XPHIT XPERM res_diff_linNULL
+ kh  793 0.9271612 XGR XDRES XPHIT XPERM res_diff_log
+ kh  757 0.9242767 XGR XDRES XSRES XPHIT log_XPERM
+ 
+ 
+ 

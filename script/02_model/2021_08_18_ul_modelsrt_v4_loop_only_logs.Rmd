@@ -180,8 +180,10 @@ logs <- c("XGR", "XDRES", "XSRES", "XPHIT", "XPERM", "res_diff_log", "res_diff_l
 
 to_train <-
   all_logs %>% 
-  rename(srt = SRT_OPCO) %>% 
-    select(logs, srt, DEPT, WELL, main_zone) %>% 
+  rename(srt = SRT_OPCO,
+         Well = WELL,
+         MD = DEPT) %>% 
+    select(logs, srt, MD, Well, main_zone) %>% 
     drop_na()
 
 
