@@ -1,0 +1,390 @@
+---
+title: "model"
+author: "Edmundo Peralta"
+date: "23/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidymodels)
+library(gt)
+library(tidyverse)
+library(skimr)
+# library(doParallel)
+library(ranger)
+library(GGally)
+library(usemodels)
+library(petroreadr)
+
+```
+
+## The Available data
+
+The core samples available in Umm lulu were joined with the log data. A selection of logs was made considering the ones available in most wells.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+core_data <- readRDS("../../clean_data/core_ready.rds") %>% 
+       mutate(main_zone = ifelse(Zone < 10 , "Kharaib"    , "other" ),
+           main_zone = ifelse(Zone == 4 ,  "Dense"     , main_zone ),
+           main_zone = ifelse(Zone == 6 ,  "Dense"     , main_zone ),
+           main_zone = ifelse(Zone == 10 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone >  10 ,  "Lekhwair" , main_zone ),
+           main_zone = ifelse(Zone == 12 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 16 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 20 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 22 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 24 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 26 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 28 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 29 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 30 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 32 ,  "Dense"    , main_zone ),
+           main_zone = ifelse(Zone == 34 ,  "Dense"    , main_zone ),
+           main_zone = as.factor(main_zone)
+                      )
+
+
+head(core_data) %>% 
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO))%>% 
+    gt() %>% 
+    fmt_number(columns = c(poro, XNPHI,XRHOB,XSW, XDRES,XSRES,XPEF,XPHIT),
+               decimals = 2
+               ) %>% 
+    fmt_number(columns = c(perm, XPERM),
+               decimals = 1
+               ) %>% 
+    cols_move_to_start(Well) %>% 
+    cols_width(
+        starts_with("sr") ~ px(1000)
+        
+        ) %>% 
+    tab_header(
+        title = md("Subset of **Core data** with associated well log values")
+    )
+
+```
+
+### Main statistics of the available dataset
+
+The following table shows the main statistics of the data set.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+core_data %>%     
+    select(-c(RT_all, 
+              `conditions experiment`,
+              estim_perm, 
+              Depth,
+              Zone,
+              SRT_OPCO
+              ))%>%
+    # group_by(Well) %>% 
+    skim()
+
+
+```
+
+
+## property analysis
+
+
+```{r fig.width=14}
+
+# core_data %>%     
+#     select(-c( MD,Well,RT_all, 
+#               `conditions experiment`,
+#               estim_perm, 
+#               Depth,
+#               Zone,
+#               SRT_OPCO, zones, 
+#               ))%>%
+#   mutate(srt = factor(srt)) %>% 
+#   ggpairs(aes(colour = srt))
+
+```
+
+
+
+
+
+### SRT distributions by zone
+
+The following figure shows the available core samples by the 2 main zones:
+
+-   **Kharaib** , including all Kharaib zones excluding the denses
+-   **Lekhwair**, including all Lekhwair zones excluding denses.
+
+
+
+```{r }
+core_data_clean <- 
+    core_data %>% 
+        filter(main_zone != "Dense",
+               XPHIT >= 0) %>% 
+    select(-c(XDT,XPEF,XSW, estim_perm))
+
+all_logs<-
+    core_data_clean %>% 
+    select(-c(Depth, 
+              poro,
+              perm,
+              `conditions experiment`, 
+              RT_all, 
+              SRT_OPCO, 
+              Zone,
+              zones))
+
+all_logs %>% 
+        ggplot(aes(srt))+
+        geom_bar(fill = "darkgreen", alpha = 0.5)+
+        facet_wrap(vars(main_zone),
+                   scales = "free")+
+        coord_flip()+
+        theme_bw()+
+        labs(x = "SRT",
+             y= "Core samples")
+
+
+
+```
+
+
+
+Given the distribution of SRTs, we will use a stratified methodology for sampling the dataset to mini ize the effect of the imbalance in the data sampling.
+
+
+
+## Data preparation
+
+
+### create logarithmic logs
+
+We create the logs, and add 0.00001md to XPERM to eliminate the problem with the 0 and the logarithm going to inf. (see the stats above were the minimum value in perm is 0)
+
+
+```{r}
+
+all_logs <- all_logs %>% 
+  mutate(XPERM = XPERM + 0.00001,
+         log_XPERM = log10(XPERM),
+         log_XDRES = log10(XDRES),
+         log_XSRES = log10(XSRES),
+         res_diff_lin = XDRES - XSRES,
+         res_diff_log = log_XDRES - log_XSRES
+         )
+
+summary(all_logs)
+```
+
+ step_zv(all_predictors())
+  update_role(row_id, new_role = "id") %>%
+   step_other(all_nominal_predictors(), threshold = 0.03) %>%
+     step_impute_linear(install_year) %>%
+  step_downsample(status_id)
+### traning and split
+
+
+
+
+```{r}
+
+logs <- c("XGR", "XSRES", "XPHIT", "res_diff_log", "res_diff_lin", "log_XPERM")
+
+
+to_train <-
+  all_logs %>% 
+    select(logs, srt, MD, Well, main_zone) %>% 
+    drop_na()
+
+
+    xdata <-
+      to_train %>% 
+      select(logs,  
+             MD,Well, srt,main_zone
+             )
+    
+
+    
+    
+    
+    kh_split <- xdata %>% 
+      filter(main_zone == "Kharaib") %>%   
+      initial_split( ) #, strata = status_id)
+    
+
+    kh_train <- training(kh_split)
+
+    
+     rf_spec <- rand_forest(trees = 1000) %>% 
+        set_mode("classification") %>% 
+        set_engine("ranger")
+    
+    
+    kh_recipe <- 
+      recipe(formula = srt ~ . , data =  kh_train) %>% 
+      update_role(MD , new_role = "id") %>% 
+      update_role(Well , new_role = "id") %>% 
+      update_role(main_zone , new_role = "id") 
+    
+   kh_wf <- workflow() %>% 
+        add_recipe(kh_recipe) %>% 
+        add_model(rf_spec)  
+    
+    
+    
+set.seed(123)
+
+  kh_fit <- fit(kh_wf, kh_train)
+
+  
+  
+  
+  
+  
+  
+```
+## load the logs to model
+
+
+
+
+```{r}
+
+
+xdata <- read_rds("../../clean_data/all_logs_for_model.rds") %>% 
+  rename(MD = DEPT,
+         Well = WELL, 
+         ) %>%
+  select("XGR"    ,   "XSRES"   ,  "XPHIT"  ,   "res_diff_log" ,"res_diff_lin", "log_XPERM", "main_zone" , "Well", "MD" ) %>% 
+  drop_na()
+
+kharaib_rrt<- predict(kh_fit, xdata)
+
+
+temp_df <- xdata %>% 
+  add_column(kharaib_rrt) %>% 
+  mutate(srt_kh = if_else(.pred_class == "SRT-1", 1, 0),
+         srt_kh = if_else(.pred_class == "SRT-2", 2, srt_kh),
+         srt_kh = if_else(.pred_class == "SRT-3", 3, srt_kh),
+         srt_kh = if_else(.pred_class == "SRT-4", 4, srt_kh),
+         srt_kh = if_else(.pred_class == "SRT-5", 5, srt_kh),
+         srt_kh = if_else(.pred_class == "SRT-6", 6, srt_kh),
+         ) %>% 
+  select(Well, MD, srt_kh) %>% 
+  rename(DEPT = MD, 
+         WELL = Well) %>% 
+  group_by(WELL) %>% 
+  do(write_las(., name = unique(.$WELL), do = TRUE))
+  
+rm(temp_df)
+
+
+```
+
+
+## lekhwair
+
+
+```{r}
+
+logs <- c( "XGR", "XSRES", "XPHIT", "res_diff_lin", "log_XPERM", "log_XDRES" )
+
+
+to_train <-
+  all_logs %>% 
+    select(logs, srt, MD, Well, main_zone) %>% 
+    drop_na()
+
+
+    xdata <-
+      to_train %>% 
+      select(logs,  
+             MD,Well, srt,main_zone
+             )
+    
+
+    
+    
+
+    lk_split <- xdata %>% 
+      filter(main_zone == "Lekhwair") %>%   
+      initial_split( ) #, strata = status_id)
+    
+
+    lk_train <- training(lk_split)
+    
+
+    lk_test <- testing(lk_split)
+   
+        
+    rf_spec <- rand_forest(trees = 1000) %>% 
+        set_mode("classification") %>% 
+        set_engine("ranger")
+    
+    
+    lk_recipe <- 
+      recipe(formula = srt ~ . , data =  lk_train) %>% 
+      update_role(MD , new_role = "id") %>% 
+      update_role(Well , new_role = "id") %>% 
+      update_role(main_zone , new_role = "id") 
+    
+
+    
+    lk_wf <- workflow() %>% 
+        add_recipe(lk_recipe) %>% 
+        add_model(rf_spec) 
+
+  lk_fit <- fit(lk_wf, lk_train)
+  
+  
+  
+  
+```
+
+
+## Predicton
+```{r}
+
+
+xdata <- read_rds("../../clean_data/all_logs_for_model.rds") %>% 
+  rename(MD = DEPT,
+         Well = WELL, 
+         ) %>%
+  select("XGR", "XSRES", "XPHIT", "res_diff_lin", "log_XPERM", "log_XDRES" , "main_zone" , "Well", "MD" ) %>% 
+  drop_na()
+
+lekhwair_rrt<- predict(lk_fit, xdata)
+
+temp_df <- xdata %>% 
+  add_column(lekhwair_rrt) %>% 
+  mutate(srt_lkh = if_else(.pred_class == "SRT-1", 1, 0),
+         srt_lkh = if_else(.pred_class == "SRT-2", 2, srt_lkh),
+         srt_lkh = if_else(.pred_class == "SRT-3", 3, srt_lkh),
+         srt_lkh = if_else(.pred_class == "SRT-4", 4, srt_lkh),
+         srt_lkh = if_else(.pred_class == "SRT-5", 5, srt_lkh),
+         srt_lkh = if_else(.pred_class == "SRT-6", 6, srt_lkh),
+         ) %>% 
+  select(Well, MD, srt_lkh) %>% 
+  rename(DEPT = MD, 
+         WELL = Well) %>% 
+  group_by(WELL) %>% 
+  do(write_las(., name = unique(.$WELL), do = TRUE))
+  
+rm(temp_df)
+
+
+
+
+```
+
+
+
